@@ -1,9 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import { PORT } from '../utils/utils.js'; // Added .js extension
 import mongoose from 'mongoose';
-import { MONGO_URI } from '../utils/utils.js'; // Added .js extension
 import userRouter from '../routes/userRoutes.js'; // Added .js extension
+
+export const PORT = 8080;
+
+export const MONGO_URI = 'mongodb+srv://nerdycoolboi69:NNgyq2s3QIj2OmnY@cluster0.blb3y.mongodb.net/elevenlabs-testing';
+
+
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI)
