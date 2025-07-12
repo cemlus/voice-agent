@@ -25,7 +25,7 @@ mongoose.connect(MONGO_URI)
 
 const app = express();
 app.use(cors( {
-  origin: 'http://localhost:5173', // Adjust this to your frontend URL
+  origin: 'https://voice-agent-editor.vercel.app/', // Adjust this to your frontend URL
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'X-API-Key']
 }));
