@@ -250,6 +250,7 @@ import { Mic, Plus, Edit3, Trash2, Save, X, Upload, User, Settings, Volume2 } fr
 import axios from "axios"
 import './App.css'
 import PaginatedVoiceList from "./components/PaginatedVoiceList"
+const BACKEND_URL = 'https://voice-agent-qqe1.onrender.com'
 
 function Spinner() {
     return (
@@ -284,7 +285,7 @@ function LongShot() {
 
     const fetchVoices = async () => {
         try {
-            const res = await axios.get("https://voice-agent-backend-hety.onrender.com/api/lmnt/voices")
+            const res = await axios.get(BACKEND_URL + "/api/lmnt/voices")
             setVoices(res.data)
         } catch (err) {
             console.error("Error fetching voices", err)
@@ -293,7 +294,7 @@ function LongShot() {
 
     const fetchVoiceDetails = async (id) => {
         try {
-            const res = await axios.get(`https://voice-agent-backend-hety.onrender.com/api/lmnt/voices/${id}`)
+            const res = await axios.get(BACKEND_URL + `/api/lmnt/voices/${id}`)
             setSelectedVoice(res.data)
             setFormData({
                 name: res.data.name,
@@ -338,7 +339,7 @@ function LongShot() {
 
         setCreating(true)
         try {
-            const res = await axios.post("https://voice-agent-backend-hety.onrender.com/api/lmnt/voices", payload)
+            const res = await axios.post(BACKEND_URL + "/api/lmnt/voices", payload)
             fetchVoices()
             setSelectedVoice(res.data.voiceData)
             // Reset form
@@ -368,7 +369,7 @@ function LongShot() {
                 gender: formData.gender,
                 description: formData.description,
             }
-            await axios.put(`https://voice-agent-backend-hety.onrender.com/api/lmnt/voices/${selectedVoice.id}`, metadata)
+            await axios.put(BACKEND_URL + `/api/lmnt/voices/${selectedVoice.id}`, metadata)
             fetchVoiceDetails(selectedVoice.id)
             fetchVoices()
             setEditMode(false)
@@ -383,7 +384,7 @@ function LongShot() {
         if (!window.confirm("Are you sure you want to delete this voice?")) return
         setDeletingId(id)
         try {
-            await axios.delete(`https://voice-agent-backend-hety.onrender.com/api/lmnt/voices/${id}`)
+            await axios.delete(BACKEND_URL + `/api/lmnt/voices/${id}`)
             setSelectedVoice((prev) => (prev?.id === id ? null : prev))
             fetchVoices()
         } catch (err) {
