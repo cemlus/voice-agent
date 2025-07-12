@@ -19,9 +19,5 @@ lmntRouter.put("/voices/:id", updateVoiceById);
 lmntRouter.delete("/voices/:id", deleteVoiceById)
 
 
-
-
-
-
 export default lmntRouter;
 

@@ -3,7 +3,7 @@ import './App.css';
 
 import axios from 'axios';
 
-export default function App() {
+function App() {
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [formData, setFormData] = useState({
