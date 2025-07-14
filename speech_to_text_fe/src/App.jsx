@@ -388,133 +388,326 @@
 // }
 
 // App.jsx
-import React, { useEffect, useRef, useState } from 'react';
+// "use strict"
 
-export default function App() {
-  const [connected, setConnected] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, MicOff, Volume2 } from 'lucide-react';
+import './App.css'
+
+const App = () => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [caption, setCaption] = useState("Realtime speech transcription API");
+  const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
+  const [debugInfo, setDebugInfo] = useState([]);
+  
   const socketRef = useRef(null);
-  const recorderRef = useRef(null);
+  const microphoneRef = useRef(null);
   const streamRef = useRef(null);
 
-  // 1) Establish WebSocket connection on mount
+  // Debug logging function
+  const addDebugLog = useCallback((message) => {
+    console.log(message);
+    setDebugInfo(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${message}`]);
+  }, []);
+
+  // Initialize WebSocket connection
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:3000');
-    socket.binaryType = 'arraybuffer';
-
-    socket.onopen = () => {
-      console.log('WS: connected');
-      setConnected(true);
-    };
-
-    socket.onmessage = (evt) => {
+    const connectWebSocket = () => {
       try {
-        const data = JSON.parse(evt.data);
-        if (data.channel) {
-          const txt = data.channel.alternatives[0].transcript;
-          if (txt) setTranscript(txt);
-        }
-      } catch (e) {
-        // could be metadata or parse error
+        addDebugLog("Attempting to connect to WebSocket...");
+        socketRef.current = new WebSocket("ws://localhost:3000");
+        
+        socketRef.current.onopen = () => {
+          addDebugLog("client: connected to server");
+          setIsConnected(true);
+          setConnectionStatus('Connected');
+          setError(null);
+        };
+
+        socketRef.current.onmessage = (event) => {
+          addDebugLog(`Received message: ${event.data.substring(0, 100)}...`);
+          if (event.data === "") {
+            return;
+          }
+          
+          let data;
+          try {
+            data = JSON.parse(event.data);
+          } catch (e) {
+            addDebugLog(`Failed to parse JSON: ${e.message}`);
+            return;
+          }
+        
+          if (data && data.channel && data.channel.alternatives && data.channel.alternatives[0] && data.channel.alternatives[0].transcript !== "") {
+            addDebugLog(`Updating caption: ${data.channel.alternatives[0].transcript}`);
+            setCaption(data.channel.alternatives[0].transcript);
+          }
+        };
+
+        socketRef.current.onclose = (event) => {
+          addDebugLog(`client: disconnected from server (code: ${event.code}, reason: ${event.reason})`);
+          setIsConnected(false);
+          setConnectionStatus('Disconnected');
+          setIsRecording(false);
+        };
+
+        socketRef.current.onerror = (error) => {
+          addDebugLog(`WebSocket error: ${error.message || 'Unknown error'}`);
+          setError("WebSocket connection failed");
+          setConnectionStatus('Connection Error');
+        };
+
+      } catch (error) {
+        addDebugLog(`Failed to create WebSocket connection: ${error.message}`);
+        setError("Failed to connect to server");
+        setConnectionStatus('Connection Failed');
       }
     };
 
-    socket.onerror = (err) => {
-      console.error('WS error:', err);
-    };
+    connectWebSocket();
 
-    socket.onclose = () => {
-      console.log('WS: disconnected');
-      setConnected(false);
-      stopRecording(); // ensure mic is off
-    };
-
-    socketRef.current = socket;
     return () => {
-      socket.close();
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
     };
-  }, []);
+  }, [addDebugLog]);
 
-  // 2) Start MediaRecorder streaming 1s blobs
-  const startRecording = async () => {
-    if (!connected || recording) return;
-
+  // Get microphone access
+  const getMicrophone = useCallback(async () => {
     try {
+      addDebugLog("Requesting microphone access...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      addDebugLog("Microphone access granted");
+      
+      // Check if MediaRecorder supports webm
+      const mimeTypes = ['audio/webm', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/wav'];
+      let supportedMimeType = null;
+      
+      for (const mimeType of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          supportedMimeType = mimeType;
+          break;
+        }
+      }
+      
+      if (!supportedMimeType) {
+        throw new Error("No supported audio format found");
+      }
+      
+      addDebugLog(`Using MIME type: ${supportedMimeType}`);
+      return new MediaRecorder(stream, { mimeType: supportedMimeType });
+    } catch (error) {
+      addDebugLog(`Error accessing microphone: ${error.message}`);
+      setError("Could not access microphone. Please check permissions.");
+      throw error;
+    }
+  }, [addDebugLog]);
 
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      recorderRef.current = recorder;
-
-      recorder.onstart = () => {
-        console.log('Mic: started');
-        setRecording(true);
+  // Setup microphone recording
+  const openMicrophone = useCallback((microphone, socket) => {
+    return new Promise((resolve) => {
+      microphone.onstart = () => {
+        addDebugLog("client: microphone opened");
+        setIsRecording(true);
+        resolve();
       };
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(e.data);
-          console.log('Sent blob size:', e.data.size);
+      microphone.onstop = () => {
+        addDebugLog("client: microphone closed");
+        setIsRecording(false);
+      };
+
+      microphone.ondataavailable = (event) => {
+        addDebugLog(`client: microphone data received - size: ${event.data.size} bytes`);
+        if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+          addDebugLog("Sending audio data to server...");
+          socket.send(event.data);
+        } else {
+          addDebugLog(`Cannot send data - size: ${event.data.size}, socket state: ${socket.readyState}`);
         }
       };
 
-      recorder.onstop = () => {
-        console.log('Mic: stopped');
-        setRecording(false);
-        stream.getTracks().forEach(t => t.stop());
+      microphone.onerror = (event) => {
+        addDebugLog(`MediaRecorder error: ${event.error}`);
+        setError(`Recording error: ${event.error}`);
       };
 
-      recorder.start(1000); // emit 1s chunks
-    } catch (err) {
-      console.error('Mic error:', err);
-    }
-  };
+      addDebugLog("Starting microphone recording...");
+      microphone.start(1000);
+    });
+  }, [addDebugLog]);
 
-  // 3) Stop recording
-  const stopRecording = () => {
-    if (recorderRef.current && recording) {
-      recorderRef.current.stop();
+  // Close microphone
+  const closeMicrophone = useCallback((microphone) => {
+    addDebugLog("Closing microphone...");
+    if (microphone && microphone.state !== 'inactive') {
+      microphone.stop();
     }
-  };
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        addDebugLog(`Stopped track: ${track.kind}`);
+      });
+      streamRef.current = null;
+    }
+  }, [addDebugLog]);
+
+  // Handle recording toggle
+  const handleRecordClick = useCallback(async () => {
+    addDebugLog(`Record button clicked - isRecording: ${isRecording}, isConnected: ${isConnected}`);
+    
+    if (!isConnected) {
+      setError("Not connected to server");
+      addDebugLog("Cannot record - not connected to server");
+      return;
+    }
+
+    if (!isRecording) {
+      try {
+        setError(null);
+        addDebugLog("Starting recording process...");
+        const microphone = await getMicrophone();
+        microphoneRef.current = microphone;
+        await openMicrophone(microphone, socketRef.current);
+        addDebugLog("Recording started successfully");
+      } catch (error) {
+        addDebugLog(`Error starting recording: ${error.message}`);
+        setError("Failed to start recording");
+      }
+    } else {
+      if (microphoneRef.current) {
+        closeMicrophone(microphoneRef.current);
+        microphoneRef.current = null;
+        addDebugLog("Recording stopped");
+      }
+    }
+  }, [isRecording, isConnected, getMicrophone, openMicrophone, closeMicrophone, addDebugLog]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      addDebugLog("Component unmounting - cleaning up...");
+      if (microphoneRef.current) {
+        closeMicrophone(microphoneRef.current);
+      }
+    };
+  }, [closeMicrophone, addDebugLog]);
 
   return (
-    <div style={{ padding: 20, fontFamily: 'sans-serif' }}>
-      <h1>🎤 Live Transcription</h1>
-      <p>
-        WS Status:{' '}
-        <strong style={{ color: connected ? 'green' : 'red' }}>
-          {connected ? 'Connected' : 'Disconnected'}
-        </strong>
-      </p>
-      <button
-        onClick={recording ? stopRecording : startRecording}
-        disabled={!connected}
-        style={{
-          padding: '0.5em 1em',
-          background: recording ? '#c00' : '#0a0',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          cursor: connected ? 'pointer' : 'not-allowed',
-        }}
-      >
-        {recording ? 'Stop Recording' : 'Start Recording'}
-      </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Captions by Deepgram
+          </h1>
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className={`font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+              {connectionStatus}
+            </span>
+          </div>
+        </div>
 
-      <div
-        style={{
-          marginTop: 20,
-          padding: 10,
-          background: '#f0f0f0',
-          minHeight: 60,
-          borderRadius: 4,
-          color: 'black'
-        }}
-      >
-        <strong>Transcript:</strong>
-        <p style={{ marginTop: 8 }}>{transcript || <em>No speech detected</em>}</p>
+        {/* Record Button */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={handleRecordClick}
+            disabled={!isConnected}
+            className={`
+              relative w-24 h-24 rounded-full transition-all duration-300 transform
+              ${isRecording 
+                ? 'bg-red-500 hover:bg-red-600 scale-110 shadow-lg shadow-red-500/50' 
+                : 'bg-blue-500 hover:bg-blue-600 hover:scale-105 shadow-lg shadow-blue-500/50'
+              }
+              ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              flex items-center justify-center
+            `}
+          >
+            {isRecording ? (
+              <>
+                <MicOff className="w-8 h-8 text-white" />
+                <div className="absolute inset-0 rounded-full border-4 border-white animate-ping"></div>
+              </>
+            ) : (
+              <Mic className="w-8 h-8 text-white" />
+            )}
+          </button>
+        </div>
+
+        {/* Button Status */}
+        <div className="text-center mb-6">
+          <span className={`text-sm font-medium ${isRecording ? 'text-red-600' : 'text-blue-600'}`}>
+            {isRecording ? 'Recording... Click to stop' : 'Click to start recording'}
+          </span>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="text-red-700 text-sm font-medium">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Information */}
+        <div className="bg-gray-100 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Log:</h3>
+          <div className="text-xs text-gray-600 space-y-1 max-h-32 overflow-y-auto">
+            {debugInfo.map((log, index) => (
+              <div key={index} className="font-mono">{log}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Captions Display */}
+        <div className="bg-gray-50 rounded-lg p-6 min-h-[120px] flex items-center justify-center">
+          <div className="text-center">
+            <Volume2 className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+            <p className="text-lg text-gray-700 leading-relaxed">
+              {caption}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer Links */}
+        <div className="flex justify-center gap-4 mt-8">
+          <a
+            href="https://console.deepgram.com/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+          >
+            Sign Up
+          </a>
+          <a
+            href="https://developers.deepgram.com/docs/introduction"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+          >
+            Read the Docs
+          </a>
+        </div>
+
+        {/* Recording Indicator */}
+        {isRecording && (
+          <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+              <span className="text-sm font-medium">Recording</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default App;
