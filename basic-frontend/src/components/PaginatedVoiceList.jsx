@@ -14,7 +14,7 @@ export default function PaginatedVoiceList({ voices, fetchVoiceDetails, handleDe
   const totalPages = Math.ceil(voices.length / voicesPerPage);
 
   return (
-    <div className="mt-8 p-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-y-auto max-h-[60vh] w-[80vw] m-auto ">
+    <div className="mt-8 p-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-y-auto max-h-[60vh] w-[60vw] m-auto ">
       <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
         <div className="flex items-center gap-2">
           <Volume2 className="w-5 h-5 text-slate-600" />
