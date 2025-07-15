@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+const BACKEND_URL = 'https://voice-agent-qqe1.onrender.com'
+
+
 function TTS() {
   const [text, setText] = useState("");
   const [voices, setVoices] = useState([]);
@@ -14,7 +17,7 @@ function TTS() {
       try {
 
         const res = await axios.get(
-          "http://localhost:8080/api/lmnt/voices"
+          BACKEND_URL + "/api/lmnt/voices"
         );
         setVoices(res.data);
         console.log(res.data);
@@ -35,7 +38,7 @@ function TTS() {
 
     try {
       const res = await axios.post(
-        "http://localhost:8080/api/lmnt/speech",
+        BACKEND_URL + "/api/lmnt/speech",
         { text, voice: voiceId },         // include selected voice
         { responseType: "blob" }
       );
