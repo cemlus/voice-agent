@@ -6,7 +6,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "voice-manager", label: "Voice Manager", icon: Mic },
-    { id: "text-to-speech", label: "Text to Speech", icon: Volume2 },
+    // { id: "text-to-speech", label: "Text to Speech", icon: Volume2 },
     { id: "TTS", label: "TTS", icon: Presentation },
   ]
 
