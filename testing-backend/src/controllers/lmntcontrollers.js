@@ -10,8 +10,7 @@ dotenv.config();
 
 const LMNT_API_KEY = process.env.LMNT_API_KEY;
 
-export async function getVoices(req, res) {
-    console.log(LMNT_API_KEY);
+export async function getVoices(req, res) {    // console.log(LMNT_API_KEY);
 
     try {
         const response = await axios.get("https://api.lmnt.com/v1/ai/voice/list", {
