@@ -8,6 +8,7 @@ import Dashboard from "./components/Dashboard"
 import LongShot from "./Longshot"
 import "./App.css"
 import TTS from "./components/TTS"
+import LiveTTSPlayer from "./components/TextToSpeech"
 
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -19,8 +20,8 @@ function App() {
         return <Dashboard />
       case "voice-manager":
         return <LongShot />
-      // case "text-to-speech":
-      //   return <TextToSpeech />
+      case "text-to-speech":
+        return <LiveTTSPlayer />
       case "TTS":
         return <TTS/>
       default:

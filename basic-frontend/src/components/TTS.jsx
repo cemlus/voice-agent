@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const BACKEND_URL = 'https://voice-agent-qqe1.onrender.com'
+export const BACKEND_URL = 'https://voice-agent-qqe1.onrender.com'
 
 
 function TTS() {
