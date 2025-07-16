@@ -12,6 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@ai-sdk/groq": "^1.2.9",
+    "ai": "^4.3.19",
     "axios": "^1.10.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
@@ -19,6 +21,7 @@
     "form-data": "^4.0.3",
     "fs": "^0.0.1-security",
     "fs-extra": "^11.3.0",
+    "groq-sdk": "^0.27.0",
     "lmnt-node": "^2.4.1",
     "mongoose": "^8.16.2",
     "multer": "^2.0.1",

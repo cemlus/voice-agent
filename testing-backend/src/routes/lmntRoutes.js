@@ -10,8 +10,7 @@ https://api.lmnt.com/v1/ai/speech/bytes this is the endpoint for the Lmnt API to
 
 import { Router } from "express";
 import { createVoice, deleteVoiceById, getVoiceById, getVoices, updateVoiceById } from "../controllers/lmntcontrollers.js"; // Adjust the path as necessary
-import { getAudioFromText } from "../controllers/lmntSpeechControllers.js";
-const LMNT_API_KEY = process.env.LMNT_API_KEY;
+import { getAudioFromText, sendLlmResponse } from "../controllers/lmntSpeechControllers.js";
 
 const lmntRouter = Router();
 
@@ -22,6 +21,7 @@ lmntRouter.put("/voices/:id", updateVoiceById);
 lmntRouter.delete("/voices/:id", deleteVoiceById)
 
 lmntRouter.post('/speech', getAudioFromText)
+lmntRouter.post('/llmoutput', sendLlmResponse)
 
 
 export default lmntRouter;
