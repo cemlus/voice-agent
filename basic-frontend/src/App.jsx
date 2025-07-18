@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Menu } from "lucide-react"
 import Sidebar from "./components/Sidebar"
 import Dashboard from "./components/Dashboard"
+import STT from "./components/STT"
 // import TextToSpeech from "./components/TextToSpeech"
 import LongShot from "./Longshot"
 import "./App.css"
@@ -22,6 +23,8 @@ function App() {
         return <LongShot />
       case "text-to-speech":
         return <LiveTTSPlayer />
+      case "speech-to-text":
+        return <STT />
       case "TTS":
         return <TTS/>
       default:

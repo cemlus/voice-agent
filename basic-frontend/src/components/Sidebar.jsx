@@ -1,12 +1,13 @@
 "use client"
 import React from "react"
-import { Home, Mic, Volume2, Settings, BarChart3, Users, X, Presentation } from "lucide-react"
+import { Home, Mic, Volume2, Settings, BarChart3, Users, X, Presentation, TextSelection } from "lucide-react"
 
 const Sidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "voice-manager", label: "Voice Manager", icon: Mic },
     { id: "text-to-speech", label: "TTS Stream", icon: Volume2 },
+    { id: "speech-to-text", label: "STT Stream", icon: TextSelection },
     { id: "TTS", label: "TTS", icon: Presentation },
   ]
 
