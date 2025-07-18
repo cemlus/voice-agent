@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "@ai-sdk/groq": "^1.2.9",
+    "@deepgram/sdk": "3.5.0",
     "ai": "^4.3.19",
     "axios": "^1.10.0",
     "cors": "^2.8.5",
